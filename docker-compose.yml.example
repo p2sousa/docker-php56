@@ -1,0 +1,61 @@
+version: "2"
+
+services:
+
+  database:
+    image: mysql:5.7
+    container_name: php56_database
+    volumes:
+      - ./docker/database/dumps:/dumps:rw,cached
+      - ./docker/database/data/mysql-master:/var/lib/mysql:rw,cached
+      - ./docker/database/config/mysql-master:/etc/mysql/conf.d:rw,cached
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_MASTER_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    expose:
+      - "3310"
+    ports:
+      - "3310:3306"
+    restart: always
+
+  application:
+    build:
+      context: application
+      args:
+        - CODE_ENV=dev
+        - GITHUB_OAUTH=${GITHUB_OAUTH}
+    environment:
+      - CODE_ENV=dev
+      - GITHUB_OAUTH=${GITHUB_OAUTH}
+    expose:
+      - "9000"
+    image: application-image
+    container_name: php56_application
+    volumes:
+      - ./application/projects/project1/:/home/psousa/projects/project1:rw,cached
+      - ./application/projects/project2/:/home/psousa/projects/project2:rw,cached
+      - php_logs:/home/psousa/logs:rw,cached
+      - php_cache:/home/psousa/tmp/cache:rw,cached
+    restart: always
+
+  nginx:
+    build:
+      context: docker/nginx
+      args:
+        - CODE_ENV=dev
+    image: nginx-image
+    container_name: php56_nginx
+    ports:
+      - "80:80"
+    volumes_from:
+      - application
+    volumes:
+      - nginx_logs:/var/log/nginx:rw,cached
+    restart: always
+
+volumes:
+  php_logs:
+  php_cache:
+  nginx_logs:
